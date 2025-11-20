@@ -52,6 +52,7 @@ static void sstf_merged_requests(struct request_queue *q, struct request *rq, st
 /* Esta função despacha o próximo bloco a ser lido. */
 static int sstf_dispatch(struct request_queue *q, int force)
 {
+	// if(DEBUG) printk(KERN_ALERT "here1\n");
 	struct sstf_data_s *nd = q->elevator->elevator_data;
 	struct disk_data_s *disk = &disk_data;
 	struct request *rq;
@@ -63,24 +64,34 @@ static int sstf_dispatch(struct request_queue *q, int force)
     sector_t req_pos;
 
 	int count = 0;
+	int dispatched = 0;
+	if(DEBUG) printk(KERN_ALERT "here1\n");
 	char direction;
+	// if(DEBUG) printk(KERN_ALERT "here1\n");
 	
-	uint64_t now_us = do_div(ktime_get_ns(), 1000);
+	uint64_t now_us = ktime_get_ns();
+	if(DEBUG) printk(KERN_ALERT "here2\n");
+	now_us = do_div(now_us, 1000);
+	if(DEBUG) printk(KERN_ALERT "here3\n");
 	uint64_t wait_time_us = (uint64_t) max_wait_time * 1000;
 
 	int is_timeout = 0;
-	if((now_us - nd->first_req_time) > wait_time_us);
-
-	list_for_each_entry(rq, &n->queue, queuelist){
+	if(DEBUG) printk(KERN_ALERT "here4\n");
+	// if((now_us - nd->first_req_time) > wait_time_us);
+	if(DEBUG) printk(KERN_ALERT "here5\n");
+	list_for_each_entry(rq, &nd->queue, queuelist){
 		count++;
+		// if(DEBUG) printk(KERN_ALERT "here6 %d\n", count);
 	}
 
 	// no reqs
+	// if(DEBUG) printk(KERN_ALERT "here7\n");
 	if(count == 0) return 0;
-	
+	// if(DEBUG) printk(KERN_ALERT "here8\n");
 
 	// not enough reqs and not timeouting and not being flushed
 	if(!force && count < queue_size && !is_timeout){
+		// if(DEBUG) printk(KERN_ALERT "here9\n");
 		return 0;
 	}
 	
@@ -91,6 +102,7 @@ static int sstf_dispatch(struct request_queue *q, int force)
 	while(!list_empty(&nd->queue)) {
 		best_rq = NULL;
 		min_dist = -1ULL; //maximum value of the arch
+		// if(DEBUG) printk(KERN_ALERT "here10\n");
 		
 		//selecting smallest dist
 		list_for_each_entry(rq, &nd->queue, queuelist){
@@ -117,14 +129,30 @@ static int sstf_dispatch(struct request_queue *q, int force)
 
 		if(best_rq) {
 			req_pos = blk_rq_pos(best_rq);
-			
+
 			if (disk->head_pos != -1) {
                 sector_t movement = (req_pos >= disk->head_pos) ? 
                                     (req_pos - disk->head_pos) : 
                                     (disk->head_pos - req_pos);
                 total_seek_distance += movement;
+				disk->head_dir = (req_pos > disk->head_pos) ? 'R' : 'L';
             }
 
+			disk->head_pos = req_pos;
+			current_pos = req_pos;
+
+			list_del_init(&best_rq->queuelist);
+			elv_dispatch_sort(q, best_rq);
+			dispatched++;
+
+			if(DEBUG){
+				direction = rq_data_dir(best_rq) == READ ? 'R' : 'W';
+				printk(KERN_ALERT "[SSTF] dsp %c %llu (dir: %c)\n", 
+                       direction, req_pos, disk->head_dir);
+			}
+
+		} else {
+			break;
 		}
 
 	}
@@ -143,8 +171,10 @@ static int sstf_dispatch(struct request_queue *q, int force)
 	// 	return 1;
 	// }
 
-	return 0;
+	return dispatched;
 }
+
+
 
 /* Esta função adiciona uma requisição ao disco em uma fila */
 static void sstf_add_request(struct request_queue *q, struct request *rq)
@@ -164,7 +194,7 @@ static void sstf_add_request(struct request_queue *q, struct request *rq)
 	if(list_empty(&nd->queue)){
 		nd->first_req_time = time;
 		nd->is_batch_active = 1;
-		if(DEBUG){printk(KERN_DEBUG "[SSTF] Batch timer started at: %llu us\n", time);}
+		if(DEBUG){printk(KERN_ALERT "[SSTF] Batch timer started at: %llu us\n", time);}
 	}
 	list_add_tail(&rq->queuelist, &nd->queue);
 	
@@ -172,6 +202,7 @@ static void sstf_add_request(struct request_queue *q, struct request *rq)
 	if(DEBUG) printk(KERN_ALERT "[SSTF] add %c %llu (%llu us)\n", direction, blk_rq_pos(rq), time);
 	
 }
+
 
 /* Esta função inicializa as estruturas de dados necessárias para o escalonador */
 static int sstf_init_queue(struct request_queue *q, struct elevator_type *e)

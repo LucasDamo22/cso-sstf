@@ -1,0 +1,1 @@
+cmd_/home/lucas/Documents/linuxdistro/buildroot-2024.05.2/modules/iosched/built-in.o :=  rm -f /home/lucas/Documents/linuxdistro/buildroot-2024.05.2/modules/iosched/built-in.o; ar rcSTPD /home/lucas/Documents/linuxdistro/buildroot-2024.05.2/modules/iosched/built-in.o
