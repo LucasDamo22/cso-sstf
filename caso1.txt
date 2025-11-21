@@ -1,0 +1,9 @@
+caso 1 
+./sstf_test_app -b 512 -s 8192 -n 200 -w 20 -p 20 -m 256 -M 512
+
+===========================================
+[SSTF] RELATÓRIO FINAL DE DESEMPENHO
+[SSTF] Distância simulada (FCFS): 2072232 setores
+[SSTF] Distância real (SSTF):     355624 setores
+[SSTF] Economia de Movimento: 82%
+===========================================
