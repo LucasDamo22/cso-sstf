@@ -48,7 +48,6 @@ run_test() {
     dmesg | grep "\[SSTF\]"
     echo "==========================================================="
     echo ""
-    # Small pause to let disk settle
     sleep 2
 }
 
@@ -58,9 +57,6 @@ echo ""
 
 # ==============================================================================
 # TEST CASE 1: High Load / Happy Path
-# WHY: Tests the algorithm's maximum efficiency. With 200 requests in a queue of 64,
-# the scheduler has many options to pick the 'closest' sector.
-# EXPECTATION: Highest Economy of Movement (Seek Reduction).
 # ==============================================================================
 run_test 1 "High Load (Happy Path)" \
     "queue_size=64 max_wait_time=50" \
@@ -68,9 +64,6 @@ run_test 1 "High Load (Happy Path)" \
 
 # ==============================================================================
 # TEST CASE 2: Timeout Logic
-# WHY: Queue size is 64, but we only send 50 requests total. The queue never fills.
-# The ONLY way this finishes is if your timer correctly fires after 50ms.
-# EXPECTATION: Test completes successfully (does not hang).
 # ==============================================================================
 run_test 2 "Timeout Check (Low Contention)" \
     "queue_size=64 max_wait_time=50" \
@@ -78,9 +71,6 @@ run_test 2 "Timeout Check (Low Contention)" \
 
 # ==============================================================================
 # TEST CASE 3: Write-Intensive
-# WHY: Simulates a workload with 80% writes. Disk schedulers often handle writes
-# differently (merges). SSTF should still provide seek reduction.
-# EXPECTATION: High reduction, proves stability under write pressure.
 # ==============================================================================
 run_test 3 "Write Intensive (80% Writes)" \
     "queue_size=64 max_wait_time=50" \
@@ -88,9 +78,6 @@ run_test 3 "Write Intensive (80% Writes)" \
 
 # ==============================================================================
 # TEST CASE 4: Small Queue (Granularity Stress)
-# WHY: Forces the batch size to be very small (5). The scheduler flushes often.
-# With fewer requests to sort, the optimization is naturally worse than Case 1.
-# EXPECTATION: Lower Economy of Movement compared to Case 1.
 # ==============================================================================
 run_test 4 "Small Queue Constraint" \
     "queue_size=5 max_wait_time=50" \
@@ -98,9 +85,6 @@ run_test 4 "Small Queue Constraint" \
 
 # ==============================================================================
 # TEST CASE 5: Fragmentation / Variable Sizes
-# WHY: Sends requests of random sizes (1 byte to 512 bytes). This tests if your
-# logic correctly handles sector alignment and robustness.
-# EXPECTATION: Moderate reduction, no kernel crashes.
 # ==============================================================================
 run_test 5 "Variable Request Sizes" \
     "queue_size=40 max_wait_time=50" \
