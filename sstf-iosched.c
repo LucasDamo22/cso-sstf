@@ -248,5 +248,5 @@ static void sstf_exit(void) {
 module_init(sstf_init);
 module_exit(sstf_exit);
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Aluno");
+MODULE_AUTHOR("Lucas Damo");
 MODULE_DESCRIPTION("SSTF IO Scheduler");
