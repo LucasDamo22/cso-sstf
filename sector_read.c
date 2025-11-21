@@ -110,12 +110,15 @@
      printf("Device: %s | Procs: %d | Ops: %d\n", device_path, num_procs, num_ops);
      
      system("echo 3 > /proc/sys/vm/drop_caches");
+ 
+
      for (i = 0; i < num_procs; i++) {
          if (fork() == 0) {
              run_worker(i);
          }
      }
-
+ 
+     // Aguarda todos terminarem
      while(wait(NULL) > 0);
  
      printf("=== Teste Finalizado ===\n");
