@@ -96,9 +96,9 @@
  
 	 // If we reach here, the gate is OPEN.
 	 // We will now FLUSH the entire queue in a loop.
-	 if (debug_mode) {
-		 printk(KERN_ALERT "[SSTF] Gate Open (Count: %d, Timeout: %d). Flushing...\n", count, is_timeout);
-	 }
+	//  if (debug_mode) {
+	// 	 printk(KERN_ALERT "[SSTF] Gate Open (Count: %d, Timeout: %d). Flushing...\n", count, is_timeout);
+	//  }
 	 
 	 // didnt time out
 	 del_timer(&nd->flush_timer);
@@ -155,11 +155,17 @@
 			 
 			 // LOG EVERY DISPATCH
 			 if (debug_mode) {
-				 direction = rq_data_dir(best_rq) == READ ? 'R' : 'W';
-				 // Using KERN_ALERT to ensure it prints to console
-				 printk(KERN_ALERT "[SSTF] dsp %c Block:%llu (Dir:%c) TotalSeek:%llu\n", 
-						direction, (unsigned long long)req_pos, disk->head_dir, total_seek_distance);
-			 }
+				char rw = (rq_data_dir(best_rq) == READ ? 'R' : 'W');
+				u64 now = ktime_get_ns();
+			
+				// Log Format: event, timestamp, block, rw, direction, current_seek_total
+				printk(KERN_DEBUG "[SSTF_STAT] event=DSP ts_ns=%llu block=%llu rw=%c dir=%c seek_total=%llu\n", 
+					   now, 
+					   (unsigned long long)blk_rq_pos(best_rq), 
+					   rw, 
+					   disk->head_dir, 
+					   total_seek_distance);
+			}
 		 } else {
 			 // Should not happen if list is not empty, but safety break
 			 break;
@@ -181,22 +187,22 @@
 	 if (list_empty(&nd->queue)) {
 		 nd->first_req_time = now_ns;
 		 mod_timer(&nd->flush_timer, jiffies + msecs_to_jiffies(max_wait_time));
-		 if (debug_mode) { 
-			 printk(KERN_ALERT "[SSTF] New Batch Started (Empty Queue)\n"); 
-		 }
+		//  if (debug_mode) { 
+		// 	 printk(KERN_ALERT "[SSTF] New Batch Started (Empty Queue)\n"); 
+		//  }
 
 	 }
  
 	 list_add_tail(&rq->queuelist, &nd->queue);
 	 
 	 if (debug_mode) {
-		 direction = rq_data_dir(rq) == READ ? 'R' : 'W';
-		 
-		 time_ms = now_ns;
-		 do_div(time_ms, 1000000); 
-		 
-		 printk(KERN_ALERT "[SSTF] add %c %llu (Timestamp: %llu ms)\n", direction, (unsigned long long)blk_rq_pos(rq), time_ms);
-	 }
+		char rw = (rq_data_dir(rq) == READ ? 'R' : 'W');
+		u64 now = ktime_get_ns();
+		
+		// Log Format: event, timestamp, block number, read/write
+		printk(KERN_DEBUG "[SSTF_STAT] event=ADD ts_ns=%llu block=%llu rw=%c\n", 
+			   now, (unsigned long long)blk_rq_pos(rq), rw);
+	}
  }
 
  static void sstf_timer_expired(unsigned long data)
@@ -204,8 +210,9 @@
     struct sstf_data_s *nd = (struct sstf_data_s *)data;
 
     if (debug_mode) {
-        printk(KERN_ALERT "[SSTF] Timer Expired! Kicking the queue.\n");
-    }
+		u64 now = ktime_get_ns();
+		printk(KERN_DEBUG "[SSTF_STAT] event=TIMEOUT ts_ns=%llu\n", now);
+	}
 
     /* "Kick" the block layer to run sstf_dispatch immediately */
     blk_run_queue(nd->q);
@@ -271,8 +278,8 @@
 	 int ret;
  
 	 /* Parameter Validation */
-	 if (queue_size < 5 || queue_size > 100) {
-		 printk(KERN_WARNING "[SSTF] Warning: queue_size %d is out of bounds (20-100). Defaulting to 64.\n", queue_size);
+	 if (queue_size < 1 || queue_size > 100) {
+		 printk(KERN_WARNING "[SSTF] Warning: queue_size %d is out of bounds (1-100). Defaulting to 64.\n", queue_size);
 		 queue_size = 64;
 	 }
  
