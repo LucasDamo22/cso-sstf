@@ -8,6 +8,8 @@ all:
 	$(MAKE) -C $(KDIR) M=$$PWD modules_install INSTALL_MOD_PATH=../../target
 	$(COMPILER) -o sector_read sector_read.c
 	cp sector_read $(BUILDROOT_DIR)/output/target/bin
+	cp runtests.sh $(BUILDROOT_DIR)/output/target/root
+	cp loadsstf.sh $(BUILDROOT_DIR)/output/target/root
 	
 clean:
 	rm -f *.o *.ko .*.cmd

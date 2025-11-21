@@ -50,21 +50,14 @@
      int req_size;
      char *buf;
      int is_write;
-     
-     // Seed único para garantir aleatoriedade real entre processos
+
      srand(time(NULL) ^ (getpid() << 16));
- 
-     // Alocação de memória padrão (simples malloc)
      buf = malloc(max_req_size);
      if (!buf) {
          perror("Erro no malloc");
          exit(1);
      }
-     
-     // Preenche com algum dado para escritas
      memset(buf, 'A', max_req_size);
- 
-     // Abertura padrão do dispositivo (com cache do SO)
      fd = open(device_path, O_RDWR);
      if (fd < 0) {
          perror("Erro ao abrir disco");
@@ -73,19 +66,10 @@
      }
  
      for (i = 0; i < num_ops; i++) {
-         // 1. Define posição aleatória (garantindo que cabe no disco)
-         pos = rand() % (disk_blocks - (max_req_size / block_size));
-         
-         // 2. Define tamanho aleatório
+         pos = rand() % (disk_blocks - (max_req_size / block_size));  
          req_size = min_req_size + (rand() % (max_req_size - min_req_size + 1));
- 
-         // 3. Define se é Leitura ou Escrita
          is_write = ((rand() % 100) < write_pct);
- 
-         // Posiciona a cabeça de leitura
          lseek(fd, pos * block_size, SEEK_SET);
- 
-         // Executa a operação
          if (is_write) {
              write(fd, buf, req_size);
          } else {
@@ -125,17 +109,13 @@
      printf("=== Iniciando Teste SSTF (Simples) ===\n");
      printf("Device: %s | Procs: %d | Ops: %d\n", device_path, num_procs, num_ops);
      
-     // Tenta limpar cache antes de começar (ajuda um pouco)
      system("echo 3 > /proc/sys/vm/drop_caches");
- 
-     // Cria os processos concorrentes
      for (i = 0; i < num_procs; i++) {
          if (fork() == 0) {
              run_worker(i);
          }
      }
- 
-     // Aguarda todos terminarem
+
      while(wait(NULL) > 0);
  
      printf("=== Teste Finalizado ===\n");
